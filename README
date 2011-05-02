@@ -1,0 +1,12 @@
+auto_download = AutoDownload.new
+auto_download.start
+#You can read file to see which file are downloaded
+#auto_download.read_file 
+
+#You can use following instance methods which are include in start
+#auto_download.download_webpages
+#auto_download.grap_filenames
+#auto_download.generate_links
+#auto_download.create_file
+#auto_download.create_dir
+#auto_download.download
