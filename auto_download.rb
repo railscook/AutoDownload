@@ -11,7 +11,11 @@ class AutoDownload
 		# Remove / at the end (because system will put / for link)
 	  if(link_path.reverse[0..0] == "/")
 	 		link_path = link_path[0..link_path.size-2]
-		end
+    end
+
+    # if http:// is not present
+    link_path = ["http://", link_path].join('') unless link_path.include?("://")
+
     @file_pattern, @link_path = file_pattern, link_path
     @links, @lines = [], ""
 		@dir, @sub_dir, @filename = link_path.split("/")[2], "download", "links.txt" 
@@ -32,7 +36,22 @@ class AutoDownload
 	  Dir.mkdir(@dir) unless File.directory?(@dir)
 	  Dir.chdir(@dir) 
     recursive = @link_path.include?('.') ? "" : "-r"
-		system("wget #{recursive} #{@link_path}")
+    link = [recursive, @link_path].join('')
+    if link.include?(".htm")
+      wget(link)
+    else
+      name = link.split("/").last
+      system("wget -O #{name}.htm #{link}")
+    end
+
+  end
+
+  def is_correct_file_extension?(link, file_pattern)
+    #link.split(".").last == @file_pattern.split(".").last
+    # .mp3?
+    link =~ /(.\w+)\z/i
+    extension = $1
+    extension == file_pattern
   end
 
   def grap_filenames
@@ -43,10 +62,12 @@ class AutoDownload
 				 lines = File.readlines(file)
 				 lines.each do |line|
 					 if line.include?(file_pattern)
-						 puts "#{file} - #{@file_pattern} - #{!(line =~  /href=(\S+)>/i).nil?}"
-						 if !(line =~ /href=(\S+)>/i ).nil? 
+						 #puts "#{file} - #{@file_pattern} - #{!(line =~  /href=(\S+)>/i).nil?}"
+						 if !(line =~ /href=(\S+)>/i ).nil?
 								link = $1
-                @links << link.gsub("\"", "")
+                #if is_correct_file_extension?(link, @file_pattern)
+                  @links << link.gsub("\"", "")
+                #end
 						 end
 					 end
 				 end
@@ -55,10 +76,10 @@ class AutoDownload
   end
 
 	def generate_links
-	 #GENERATE LINK PATH AND ADD IN LINES 
-	 @lines = "" 
+	 #GENERATE LINK PATH AND ADD IN LINES
+	 @lines = ""
 	 @links.uniq.compact.each do |x|
-	 link = x  
+	 link = x
 	 @lines << "#{link} \r\n"
 	 end
 	end
@@ -76,24 +97,39 @@ class AutoDownload
 	def create_dir
 	 #CREATE DIRECTORY TO DOWNLOAD
 	 Dir.mkdir(@sub_dir) unless File.directory?(@sub_dir)
-	 Dir.chdir(@sub_dir) 
+	 Dir.chdir(@sub_dir)
 	end
+
+  def download_from_string
+   @lines = @lines.split("\r\n")
+   @lines.each do |line|
+      wget(line)
+   end
+  end
+
+  def wget(link)
+      begin
+        text = " wget #{link}"
+        puts text.inspect
+        system(text)
+      rescue Exception => e
+      end
+  end
 
 	def download 
 	 #DOWNLOAD LINK BY LINK
-	 @lines.each do |line|
-	 link = line.split(" ").first
-	 file = link.split("/").last
-		puts link
-		puts file
-		puts File.exist? file
-		unless File.exist? file
-		 begin
-		  system(" wget #{link}")
-		 rescue
-		 end
-		end
-	 end
+    
+    return download_from_string if @lines.is_a?(String)
+    @lines.each do |line|
+  	 link = line.split(" ").first
+	   file = link.split("/").last
+     unless link.include?("://")
+       link = [@link_path, link].join('')
+     end
+		  unless File.exist? file
+        wget(link)
+		  end
+	  end
 	end
 end
 

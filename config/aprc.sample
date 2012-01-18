@@ -1,0 +1,7 @@
+# ~/.aprc file.
+# awesome_print
+AwesomePrint.defaults = {
+:index => false, :multiline => true, :sort_keys => false, :indent => -2,
+:color => {:symbol => :red, :variable => :red}
+}
+

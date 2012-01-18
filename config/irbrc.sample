@@ -1,0 +1,105 @@
+require 'logger'
+require 'json/pure'
+require 'rails'
+require 'rubygems'
+
+def set_logging
+ Object.const_set('LOG', Logger.new("#{ENV['PWD']}/log/console.log"))
+ #LOG.info('')
+ #LOG.info('=================================================')
+ #LOG.info("# Logfile recorded on #{Time.now}")
+end
+
+def info
+  puts "#Log file #{ENV['PWD']}/log/console.log"
+  puts 'e.g log \'hi\''
+  puts 'e.g data = {:person => {:first_name => "John", :last_name => "Smith", :address => {:location => ["USA", "UK", "Thailand", "Myanmar", "Australia"]}}}'
+  puts 'e.g data = JSON.parse (Person.all(:limit => 2).to_json)'
+  puts 'e.g ap data, options ={:index => false, :multiline => true, :sort_keys => false, :indent => -2 } #(for pretty print from awesome_print)'
+
+end
+
+def log(txt)
+  LOG.info(txt.to_s)
+end
+
+def copylog
+  current_dir = Dir.pwd
+  system("cat #{current_dir}/log/console.log >> ~/log/console.log")
+end
+
+def ap_json(data, options={})
+ # data is after ap data , copy output and put in code ''
+ # expecting data hash response from (ap data)
+ # e.g: sample = {:hi => 123}
+ # data = sample.ai
+ # "{\n  :hi\e[0;37m => \e[0m\e[1;34m123\e[0m\n}"
+ puts "#"*50
+ puts "JSON data from hash"
+ puts "#"*50
+ 
+ data = data.ai ? data.ai : data.to_s
+ 
+if data.include?(":") # symbol in hash
+ data = data.to_s.gsub(":", "\"").gsub("\e[0;37m","\"")
+end
+
+ printable_json = data.gsub("=>",":").gsub("nil","null")
+
+
+ #printable_json = data.to_s.gsub(":", "\"").gsub("\e[0;37m","\"").gsub("=>",":").gsub("nil","null")
+ puts printable_json
+
+ if options[:json] == true
+  parsedable_json_data = printable_json.gsub("\n", "").gsub(" ","") 
+  puts parsedable_json_data
+ end
+
+end
+
+def ap_format(data, options={}) 
+ format ||= :to_s
+ format = :to_s if options[:string]
+ format = :to_sym if options[:symbol]
+ data.inject({}){|hh, (k,v)| hh[k.send(format)] = v.is_a?(Hash) ? ap_format(v, options) : v; hh}
+end
+
+
+########### NOT RAILS ###########
+def set_pretty_print
+ unless IRB.version.include?('DietRB')
+  IRB::Irb.class_eval do
+    def output_value
+     # puts "output_value"
+     # puts "context #{@context.last_value.class}"
+     # puts "context #{@context.last_value}"
+     data = @context.last_value 
+     if @context.last_value.is_a? Hash
+      data = ap_format @context.last_value
+     end
+
+     puts "#"*100
+     ap data
+     
+     #end
+    end
+  end
+ else # MacRuby
+  IRB.formatter = Class.new(IRB::Formatter) do
+    def inspect_object(object)
+      object.ai
+    end
+  end.new
+ end
+end
+
+
+if ENV["_"].include?("bin/rails")
+  set_logging
+else
+ require "rubygems"
+ require "awesome_print"
+ set_pretty_print
+end
+
+info
